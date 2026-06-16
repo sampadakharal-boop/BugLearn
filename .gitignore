@@ -57,3 +57,5 @@ server.log
 # Python build
 *.pyc
 __pycache__/
+
+.vercel

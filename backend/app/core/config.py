@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -8,6 +9,10 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./reconforge.db"
+
+    @property
+    def is_vercel(self) -> bool:
+        return "VERCEL" in os.environ
     REDIS_URL: str = "redis://localhost:6379/0"
 
     @property
@@ -18,7 +23,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://buglearn.vercel.app",
+        "https://buglearn-*.vercel.app",
+        "https://*.vercel.app",
+    ]
 
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-3.5-turbo"
