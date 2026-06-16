@@ -249,6 +249,7 @@ const dictionary: DictEntry[] = [
     definition: 'Transmission Control Protocol / Internet Protocol — the fundamental communication protocols of the Internet. TCP ensures reliable, ordered delivery of data between applications. IP handles addressing and routing of packets between computers. Together, they form the backbone of Internet communication.',
     analogy: 'TCP/IP is like a postal system combined with phone call confirmation. IP is the postal service — it addresses packages (packets) and routes them to the right destination. TCP is like requiring a signature confirmation — both sides confirm every package arrived intact and in order.',
     technicalDetail: 'TCP uses a three-way handshake: SYN → SYN-ACK → ACK. It provides flow control, error checking, and retransmission of lost packets. IP provides logical addressing (IPv4 32-bit, IPv6 128-bit) and routing. Ports (0-65535) identify specific applications or services.',
+    bugBountyContext: 'In bug bounty, TCP/IP knowledge helps with: understanding port scanning results, analyzing firewall rules, identifying services by port numbers, and troubleshooting connectivity issues during testing.',
     category: 'Networking',
     seeAlso: ['HTTP', 'DNS', 'IP Address'],
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -32,7 +32,7 @@ type NotesResult = {
   created_at: string;
 };
 
-export default function NotesPage() {
+function NotesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const levelFromParam = searchParams.get('level');
@@ -456,5 +456,21 @@ export default function NotesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NotesPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-64 skeleton" />
+          <div className="h-4 w-96 skeleton" />
+          <div className="h-64 skeleton" />
+        </div>
+      </div>
+    }>
+      <NotesPageContent />
+    </Suspense>
   );
 }
