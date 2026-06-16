@@ -1,5 +1,9 @@
 {
-  "rootDirectory": "frontend",
-  "outputDirectory": ".next",
-  "framework": "nextjs"
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
 }
