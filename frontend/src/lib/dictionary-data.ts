@@ -1,0 +1,683 @@
+export interface DictEntry {
+  term: string;
+  slug: string;
+  definition: string;
+  analogy: string;
+  bugBountyContext: string;
+  technicalDetail?: string;
+  mermaidDiagram?: string;
+  category: string;
+  seeAlso?: string[];
+}
+
+const dictionary: DictEntry[] = [
+  {
+    term: 'HTTP',
+    slug: 'http',
+    definition: 'HyperText Transfer Protocol — the language that web browsers and servers use to communicate. When you visit a website, your browser sends an HTTP request asking for data, and the server sends back an HTTP response. HTTP is like a waiter taking your order (request) and bringing your food (response).',
+    analogy: 'Think of HTTP like ordering at a restaurant. You (the browser) tell the waiter (HTTP request) what you want. The chef (server) prepares it, and the waiter brings it back (HTTP response). The menu is the website, and each item is a different page or resource.',
+    bugBountyContext: 'In bug bounty, you analyze HTTP requests and responses to find vulnerabilities. You look for manipulated methods (e.g., GET instead of POST), missing security headers, exposed data in responses, and parameter tampering. Tools like Burp Suite let you intercept and modify HTTP traffic.',
+    mermaidDiagram: `sequenceDiagram
+    participant Browser
+    participant Server
+    Browser->>Server: HTTP GET /page
+    Server-->>Browser: HTTP 200 OK + HTML
+    Note over Browser,Server: HTTP is plain text - readable by anyone`,
+    technicalDetail: 'HTTP operates as a request-response protocol in the client-server model. Default port is 80. Methods include GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS. Status codes are grouped: 2xx (success), 3xx (redirect), 4xx (client error), 5xx (server error). HTTP/1.1 added persistent connections, HTTP/2 added multiplexing, HTTP/3 uses QUIC over UDP.',
+    category: 'Networking',
+    seeAlso: ['HTTPS', 'TCP/IP', 'DNS'],
+  },
+  {
+    term: 'HTTPS',
+    slug: 'https',
+    definition: 'HyperText Transfer Protocol Secure — the encrypted version of HTTP. HTTPS wraps HTTP traffic in TLS/SSL encryption so that data cannot be read or modified by anyone between the browser and the server. The padlock icon in your browser means HTTPS is active.',
+    analogy: 'HTTPS is like putting your letter in a locked, transparent box instead of a postcard. Everyone can see it\'s a letter (it exists), but only the recipient has the key to open it. HTTP is a postcard — anyone handling it can read what\'s written.',
+    bugBountyContext: 'Check for mixed content (HTTP resources on HTTPS pages), missing HSTS headers, SSL/TLS misconfigurations, expired certificates, and protocol downgrade attacks. HTTPS is mandatory for modern bounty programs — finding HTTP endpoints is often a valid report.',
+    category: 'Networking',
+    seeAlso: ['HTTP', 'TLS', 'SSL'],
+  },
+  {
+    term: 'DNS',
+    slug: 'dns',
+    definition: 'Domain Name System — the phonebook of the Internet. DNS translates human-friendly domain names like "google.com" into machine-friendly IP addresses like "142.250.190.46". Without DNS, you would have to memorize numbers for every website.',
+    analogy: 'DNS is like your phone\'s contact list. You save "Mom" instead of memorizing their phone number. When you call "Mom," your phone looks up the number and dials it. DNS does the same — you type "google.com," and DNS finds the IP address.',
+    bugBountyContext: 'DNS misconfigurations can lead to subdomain takeover — when a CNAME record points to a service (AWS S3, GitHub Pages) that no longer exists, you can claim it and host content there. Also check for DNS zone transfers, DNSSEC issues, and information disclosure via DNS records.',
+    mermaidDiagram: `flowchart TD
+    A[Browser] -->|google.com?| B[DNS Resolver]
+    B -->|Ask root| C[Root Server]
+    C -->|.com server| D[TLD Server]
+    D -->|Authoritative| E[Domain DNS]
+    E -->|IP: 142.250.x.x| B
+    B -->|IP Address| A
+    A -->|Connect| F[Server]`,
+    category: 'Networking',
+    seeAlso: ['HTTP', 'IP Address', 'Subdomain'],
+  },
+  {
+    term: 'XSS',
+    slug: 'xss',
+    definition: 'Cross-Site Scripting — a vulnerability that lets attackers inject malicious JavaScript into web pages viewed by other users. XSS can steal cookies, redirect users, deface websites, or perform actions as the victim. Three types: Reflected (in URL), Stored (in database), DOM-based (client-side only).',
+    analogy: 'XSS is like someone slipping a fake note into a library book. When the next person reads that page, they see the note and follow its instructions — thinking it\'s part of the book. The library (server) unknowingly delivered the attacker\'s message.',
+    bugBountyContext: 'XSS is one of the most common bugs. Test every input field, URL parameter, and header. Check if output is properly encoded. Stored XSS in comments/profiles is usually high severity. Use payloads like <script>alert(1)</script> for PoC. CSP can mitigate but not prevent XSS.',
+    mermaidDiagram: `flowchart LR
+    A[Attacker] -->|Injects script| B[Server]
+    B -->|Delivers to| C[Victim Browser]
+    C -->|Executes| D[Steals Cookie]
+    D -->|Sends to| A
+    style A fill:#ef4444,color:white
+    style C fill:#3b82f6,color:white`,
+    technicalDetail: 'XSS occurs when user input is included in a web page without proper escaping. Three contexts: HTML body (<div>USER</div>), HTML attribute (<div class="USER">), and JavaScript (var x = "USER"). Each requires different escaping. Use Content Security Policy (CSP) as defense-in-depth.',
+    category: 'Vulnerabilities',
+    seeAlso: ['CSRF', 'CSP', 'Cookie'],
+  },
+  {
+    term: 'SQL Injection',
+    slug: 'sql-injection',
+    definition: 'SQL Injection (SQLi) — a vulnerability that lets attackers interfere with database queries by inserting malicious SQL code into user inputs. Can lead to data theft, authentication bypass, data deletion, and in some cases remote code execution on the database server.',
+    analogy: 'SQLi is like a bank teller who reads your deposit slip exactly as written — including any extra instructions. If you write "Deposit $100 AND also give me all the cash from the vault," the teller does both because they follow instructions literally.',
+    bugBountyContext: 'SQLi is a critical-severity finding. Test by adding a single quote (\') to inputs and looking for errors. Use time-based tests (SLEEP(5)) for blind SQLi. UNION SELECT extracts data. Parameterized queries are the only complete defense. Always report SQLi immediately.',
+    mermaidDiagram: `flowchart TD
+    A[User Input] --> B{Sanitized?}
+    B -->|No| C[Query: SELECT * FROM users WHERE id = '1' OR '1'='1']
+    C --> D[All user records leaked!]
+    B -->|Yes| E[Query: SELECT * FROM users WHERE id = $1]
+    E --> F[Only requested user returned]`,
+    technicalDetail: 'Types: In-band (error-based, union-based), Blind (boolean-based, time-based), Out-of-band (DNS/HTTP exfiltration). SQLi exists in WHERE clauses, INSERT statements, UPDATE statements, ORDER BY clauses, and even HTTP headers. WAF can be bypassed with encoding, comments, and alternative syntax.',
+    category: 'Vulnerabilities',
+    seeAlso: ['Injection', 'Authentication', 'Database'],
+  },
+  {
+    term: 'CSRF',
+    slug: 'csrf',
+    definition: 'Cross-Site Request Forgery — an attack that tricks an authenticated user into performing unintended actions on a website. The attacker creates a malicious page that auto-submits a form to the target site. Since the browser automatically sends cookies, the server thinks the request is legitimate.',
+    analogy: 'CSRF is like someone mailing a letter that looks like it\'s from you. The bank receives the letter, sees your signature (cookie), and follows the instructions — not realizing the letter was forged. Your valid signature is being used against you.',
+    bugBountyContext: 'Test for CSRF by submitting forms from external sites. Check if requests require custom headers (X-Requested-With), CSRF tokens, or SameSite cookies. High severity when combined with other bugs (e.g., CSRF + password change = account takeover).',
+    mermaidDiagram: `sequenceDiagram
+    participant Victim
+    participant Bank
+    participant Attacker
+    Victim->>Bank: Login (gets cookie)
+    Victim->>Attacker: Visits malicious site
+    Attacker->>Victim: Auto-submits hidden form
+    Victim->>Bank: POST /transfer (with cookie!)
+    Bank->>Bank: Valid cookie - processes!
+    Bank-->>Victim: Transfer complete`,
+    category: 'Vulnerabilities',
+    seeAlso: ['XSS', 'Cookie', 'SameSite'],
+  },
+  {
+    term: 'IDOR',
+    slug: 'idor',
+    definition: 'Insecure Direct Object Reference — a vulnerability where you can access data belonging to other users by modifying an identifier (like an ID number) in a request. If changing /api/user/123 to /api/user/124 shows another user\'s data, that\'s an IDOR.',
+    analogy: 'IDOR is like a hotel where your room key opens any room door if you just change the room number. The hotel checks that you have a key (authenticated) but doesn\'t check if you\'re allowed in THAT specific room (authorized).',
+    bugBountyContext: 'IDORs are extremely common and often high severity. Test by incrementing/decrementing IDs, trying UUIDs from other contexts, switching HTTP methods, and checking if you can access other users\' files, orders, or messages. Always check both numeric and alphanumeric IDs.',
+    category: 'Vulnerabilities',
+    seeAlso: ['Authentication', 'Authorization', 'API Security'],
+  },
+  {
+    term: 'Cookie',
+    slug: 'cookie',
+    definition: 'A small piece of data that a server sends to a browser, which the browser stores and sends back with every subsequent request to that domain. Cookies are used for session management, personalization, and tracking. They are domain-specific and can be secured with flags like HttpOnly and Secure.',
+    analogy: 'A cookie is like a VIP wristband at a festival. When you enter (log in), they give you a wristband (cookie). Every time you visit a different tent (page), the staff checks your wristband — they know you\'re already verified. The wristband has your access level written on it.',
+    bugBountyContext: 'Check for missing HttpOnly (JS can steal cookie via XSS), missing Secure (cookie sent over HTTP), missing SameSite (vulnerable to CSRF), predictable session cookies, long expiry times, and cookies not invalidated on logout.',
+    technicalDetail: 'Cookie attributes: Domain (which domains receive it), Path (which URLs), Expires/Max-Age (lifetime), Secure (HTTPS only), HttpOnly (no JS access), SameSite (cross-site control - Strict, Lax, None). Session cookies (no Expires) deleted when browser closes. Persistent cookies survive browser restarts.',
+    category: 'Web Fundamentals',
+    seeAlso: ['Session', 'JWT', 'CSRF'],
+  },
+  {
+    term: 'JWT',
+    slug: 'jwt',
+    definition: 'JSON Web Token — a compact, URL-safe token used for authentication. It has three parts: header (algorithm type), payload (data like user ID and role), and signature (verification). Looks like xxxxx.yyyyy.zzzzz. JWTs are "stateless" — the server doesn\'t need to store session data.',
+    analogy: 'JWT is like a stamped passport. Your passport has your photo and info (payload), says how it was verified (header), and has an official stamp (signature). Immigration (the server) checks the stamp is valid — they don\'t need to call your home country to verify you.',
+    bugBountyContext: 'Common JWT bugs: "none" algorithm attack (change alg to "none"), weak HMAC secret cracking, algorithm confusion (RS256→HS256 using public key), expired token reuse, missing signature verification, and information disclosure in payload.',
+    technicalDetail: 'JWT structure: Base64Url(header).Base64Url(payload).Base64Url(signature). Header contains alg (HS256, RS256, ES256) and typ (JWT). Payload contains claims (sub, iat, exp, role). Signature is created by encoding header+payload with the secret/private key. JWTs should be stored in HttpOnly cookies, not localStorage.',
+    category: 'Authentication',
+    seeAlso: ['Cookie', 'Session', 'Authentication'],
+  },
+  {
+    term: 'Session',
+    slug: 'session',
+    definition: 'A session is a temporary, server-side store of user state that persists across multiple HTTP requests. After login, the server creates a session, gives the browser a session ID (usually via cookie), and uses that ID to look up session data on each subsequent request.',
+    analogy: 'A session is like a coat check. You give your coat to the attendant, they give you a ticket (session ID). Every time you want your coat (data), you hand over the ticket, and they retrieve it. The coat is stored securely at the venue (server), not in your pocket.',
+    bugBountyContext: 'Check for session fixation (attacker sets victim\'s session ID before login), predictable session IDs, no session expiry on logout, concurrent session limits, and session data exposure. Session tokens should be random, long, and regenerated after login.',
+    category: 'Authentication',
+    seeAlso: ['Cookie', 'JWT', 'Authentication'],
+  },
+  {
+    term: 'Authentication',
+    slug: 'authentication',
+    definition: 'Authentication is the process of verifying who a user is — proving their identity. Usually done with passwords, biometrics, or security tokens. "Are you who you say you are?" Not to be confused with Authorization (what you\'re allowed to do).',
+    analogy: 'Authentication is showing your ID at airport security. You present your passport (password, fingerprint, token) to prove you are who you claim to be. Once verified, you\'re authenticated. What you can then do (which gates you can enter) is Authorization.',
+    bugBountyContext: 'Test for: weak passwords, no rate limiting (brute force), username enumeration (different errors for valid/invalid users), weak password reset tokens, missing MFA, credential stuffing, and OAuth misconfigurations. Authentication bugs are often high severity.',
+    category: 'Security Concepts',
+    seeAlso: ['Authorization', 'Session', 'JWT'],
+  },
+  {
+    term: 'Authorization',
+    slug: 'authorization',
+    definition: 'Authorization determines what an authenticated user is allowed to do — which resources they can access, what actions they can perform. "What are you allowed to do?" While authentication checks identity, authorization checks permissions.',
+    analogy: 'At a concert, authentication is showing your ticket to enter. Authorization is the color of your wristband — green means general admission, gold means backstage. Even though everyone is authenticated (has a ticket), not everyone is authorized to go backstage.',
+    bugBountyContext: 'Authorization bugs (broken access control) are the most common serious vulnerability. Test horizontal (User A accessing User B\'s data) and vertical (user accessing admin functions) privilege escalation. Check API endpoints, hidden features, and HTTP method overrides.',
+    category: 'Security Concepts',
+    seeAlso: ['Authentication', 'IDOR', 'Privilege Escalation'],
+  },
+  {
+    term: 'Payload',
+    slug: 'payload',
+    definition: 'In cybersecurity, a payload is the malicious code or data delivered by an exploit. In web terms, it\'s the body of an HTTP request (for POST/PUT) or the malicious input used to trigger a vulnerability. Payloads can be scripts (XSS), SQL commands (SQLi), or shellcode.',
+    analogy: 'A payload is like the actual poison in a delivered package. The delivery method (exploit) is the syringe, the package is the delivery mechanism, but the payload is the actual harmful content inside. Without the payload, the exploit is just noise.',
+    bugBountyContext: 'Crafting effective payloads is key to proving impact. For XSS: <script>alert(1)</script> for PoC, or fetch to exfiltrate cookies. For SQLi: \' OR 1=1-- for auth bypass. For SSTI: {{7*7}} to test. Always start simple, then escalate based on what works.',
+    category: 'General',
+    seeAlso: ['XSS', 'SQL Injection', 'Exploit'],
+  },
+  {
+    term: 'Reconnaissance',
+    slug: 'reconnaissance',
+    definition: 'Reconnaissance (recon) is the process of gathering information about a target system before attacking. In bug bounty, it\'s 80% of the work. Passive recon uses public sources only (Google, Shodan, GitHub). Active recon involves directly interacting with the target (scanning, probing).',
+    analogy: 'Recon is like a bank robber studying the bank before the heist. They watch employee schedules (OSINT), study the building layout (mapping), check security camera positions (tech detection), and look for unlocked doors (vulnerabilities) — all before making a move.',
+    bugBountyContext: 'Good recon finds hidden subdomains, exposed APIs, leaked credentials, forgotten servers, and misconfigured services. Use tools like Subfinder, Amass, Shodan, Wayback Machine, and Google dorks. Document everything — recon notes often lead to the actual finding.',
+    category: 'Methodology',
+    seeAlso: ['OSINT', 'Subdomain', 'Attack Surface'],
+  },
+  {
+    term: 'OSINT',
+    slug: 'osint',
+    definition: 'Open Source Intelligence — information gathered from publicly available sources. For bug bounty: Shodan (devices), Censys (certificates), Wayback Machine (historical pages), Google dorking (advanced search), GitHub (leaked code), WHOIS (domain info), and LinkedIn (employee data).',
+    analogy: 'OSINT is like being a detective who only uses public records. You never knock on doors or talk to suspects. You read newspaper archives (Wayback), look up property records (WHOIS), check social media (LinkedIn), and search public databases (Shodan) — all legally available information.',
+    bugBountyContext: 'OSINT reveals subdomains, tech stacks, employee credentials, hidden endpoints, and infrastructure details. Check crt.sh for certificate subdomains, GitHub for leaked API keys, Google dorks for exposed files, and job postings for tech stack details.',
+    category: 'Methodology',
+    seeAlso: ['Reconnaissance', 'Subdomain', 'Google Dorking'],
+  },
+  {
+    term: 'Subdomain',
+    slug: 'subdomain',
+    definition: 'A subdomain is a domain that is part of a larger domain. For example, "blog.example.com" is a subdomain of "example.com". Subdomains often host different applications or environments (admin, api, dev, staging) — expanding the attack surface.',
+    analogy: 'A subdomain is like a department within a company. "Sales.company.com" and "IT.company.com" are separate departments under the same company. Just like departments have different doors, subdomains often have different applications and security postures.',
+    bugBountyContext: 'Find subdomains to discover hidden attack surface. Use certificate transparency logs (crt.sh), DNS brute-forcing, search engines, and JavaScript source code analysis. Subdomain takeover (claiming abandoned subdomains) is a common high-severity finding.',
+    category: 'Methodology',
+    seeAlso: ['DNS', 'Reconnaissance', 'Attack Surface'],
+  },
+  {
+    term: 'SSRF',
+    slug: 'ssrf',
+    definition: 'Server-Side Request Forgery — a vulnerability where an attacker can make a server send requests to internal or external systems. The attacker exploits a feature that fetches URLs, causing the server to make requests to unintended locations like internal networks or cloud metadata services.',
+    analogy: 'SSRF is like tricking a mailroom clerk into delivering a package to the janitor\'s closet instead of the intended recipient. The clerk has access to areas you don\'t, and you exploit their access by manipulating the address label (URL).',
+    bugBountyContext: 'SSRF can access internal services, cloud metadata endpoints (169.254.169.254), and internal APIs. Test URL parameters, file upload URLs, webhook URLs, and any feature that fetches external resources. Use blind SSRF techniques with Burp Collaborator or interactsh.',
+    technicalDetail: 'Common targets: AWS metadata (169.254.169.254/latest/meta-data/), GCP metadata (metadata.google.internal), internal services (localhost:9200 for Elasticsearch), and cloud storage (s3://). Bypass filters with URL encoding, redirects, and DNS rebinding.',
+    category: 'Vulnerabilities',
+    seeAlso: ['Injection', 'API Security', 'Cloud Security'],
+  },
+  {
+    term: 'CSP',
+    slug: 'csp',
+    definition: 'Content Security Policy — a browser security header that controls what resources (scripts, styles, images, fonts) can load on a page. CSP is the most effective defense against XSS when properly configured. Defined via the Content-Security-Policy HTTP header.',
+    analogy: 'CSP is like a bouncer at a club with a strict guest list. The bouncer checks every person trying to enter (every script trying to run) against the list. If a script isn\'t on the list (not from an allowed source), it doesn\'t get in — even if it somehow got past the front door.',
+    bugBountyContext: 'Check for missing CSP (common low-severity finding), misconfigured CSP (e.g., unsafe-inline, unsafe-eval, overly broad script-src), and CSP bypasses. CSP can be reported even without XSS as defense-in-depth. Cloudflare and other CDNs often add CSP headers.',
+    category: 'Security Concepts',
+    seeAlso: ['XSS', 'HTTP Headers', 'CORS'],
+  },
+  {
+    term: 'CORS',
+    slug: 'cors',
+    definition: 'Cross-Origin Resource Sharing — a browser security mechanism that controls which domains can access resources from your site. CORS uses HTTP headers to tell the browser "this other domain is allowed to read my responses." Misconfiguration can leak sensitive data.',
+    analogy: 'CORS is like a building\'s visitor policy. The building (your server) puts up a sign saying "visitors from Company A and Company B are allowed." When someone from Company C tries to enter, the guard (browser) checks the sign and turns them away.',
+    bugBountyContext: 'Check for overly permissive CORS (Access-Control-Allow-Origin: *) on sensitive endpoints, misconfigured origin reflection (echoing back any Origin header), and missing Vary: Origin header. CORS + authenticated endpoints can lead to data theft.',
+    category: 'Security Concepts',
+    seeAlso: ['CSP', 'HTTP Headers', 'API Security'],
+  },
+  {
+    term: 'TLS',
+    slug: 'tls',
+    definition: 'Transport Layer Security — the cryptographic protocol that provides encryption for HTTPS. TLS ensures privacy (data can\'t be read), integrity (data can\'t be modified), and authentication (you\'re talking to the real server). It replaced the older SSL protocol.',
+    analogy: 'TLS is like a secure voice scrambler on a phone line. Both you and the person you\'re calling have the same scrambler device. Anyone tapping the line hears only garbled noise, but you and the recipient hear each other clearly.',
+    bugBountyContext: 'Check for weak TLS versions (TLS 1.0, 1.1 — should use 1.2+), weak cipher suites, expired or misconfigured certificates, and Host Header Injection in TLS handshakes. Use SSL Labs for comprehensive TLS testing.',
+    category: 'Networking',
+    seeAlso: ['HTTPS', 'SSL', 'Encryption'],
+  },
+  {
+    term: 'SSL',
+    slug: 'ssl',
+    definition: 'Secure Sockets Layer — the predecessor to TLS. SSL is deprecated and considered insecure due to known vulnerabilities like POODLE. However, the term "SSL" is still commonly used to refer to TLS certificates. "SSL certificate" really means "TLS certificate" today.',
+    analogy: 'SSL is like an old, cracked safe. People still call modern safes by the old brand name, but the technology inside is completely different. The "SSL certificate" you buy today is actually a TLS certificate — just using the old name out of habit.',
+    bugBountyContext: 'SSL-specific attacks (POODLE, Heartbleed) are rare today but still worth checking on legacy systems. Most importantly, ensure the server doesn\'t support SSLv3 or TLS 1.0/1.1. Report outdated SSL/TLS configurations as informational to medium severity.',
+    category: 'Networking',
+    seeAlso: ['TLS', 'HTTPS', 'Encryption'],
+  },
+  {
+    term: 'TCP/IP',
+    slug: 'tcp-ip',
+    definition: 'Transmission Control Protocol / Internet Protocol — the fundamental communication protocols of the Internet. TCP ensures reliable, ordered delivery of data between applications. IP handles addressing and routing of packets between computers. Together, they form the backbone of Internet communication.',
+    analogy: 'TCP/IP is like a postal system combined with phone call confirmation. IP is the postal service — it addresses packages (packets) and routes them to the right destination. TCP is like requiring a signature confirmation — both sides confirm every package arrived intact and in order.',
+    technicalDetail: 'TCP uses a three-way handshake: SYN → SYN-ACK → ACK. It provides flow control, error checking, and retransmission of lost packets. IP provides logical addressing (IPv4 32-bit, IPv6 128-bit) and routing. Ports (0-65535) identify specific applications or services.',
+    category: 'Networking',
+    seeAlso: ['HTTP', 'DNS', 'IP Address'],
+  },
+  {
+    term: 'IP Address',
+    slug: 'ip-address',
+    definition: 'Internet Protocol address — a unique numerical label assigned to every device connected to a network. IPv4 addresses look like 192.168.1.1 (four numbers 0-255). IPv6 addresses look like 2001:0db8::1 (eight hex groups). Every device needs an IP to communicate on the Internet.',
+    analogy: 'An IP address is like your home address. Just as the postal service needs your street address to deliver mail, the Internet needs your IP address to deliver data. IPv4 is like a standard address format, but we\'re running out, so IPv6 (a much larger format) is replacing it.',
+    bugBountyContext: 'Understanding IP addressing helps with: identifying infrastructure (cloud IP ranges, CDN IPs), bypassing restrictions (IPv6 may have different firewall rules), detecting server location, and finding internal IPs leaked in headers or error messages.',
+    category: 'Networking',
+    seeAlso: ['TCP/IP', 'DNS', 'Network'],
+  },
+  {
+    term: 'API',
+    slug: 'api',
+    definition: 'Application Programming Interface — a set of rules that allows different software applications to communicate with each other. Web APIs use HTTP requests to access and manipulate data. REST APIs are the most common type, using GET/POST/PUT/DELETE methods to work with resources.',
+    analogy: 'An API is like a restaurant menu. You (the app) don\'t go into the kitchen to cook — you just tell the waiter what you want from the menu (make an API call). The kitchen (server) prepares it and sends it out. The menu defines what\'s possible — the API defines what actions the app can perform.',
+    bugBountyContext: 'APIs are goldmines for bounty hunters. Test for: IDOR (changing IDs), mass assignment (sending extra fields), excessive data exposure (sensitive fields in responses), rate limiting issues, broken authentication, and undocumented endpoints found via JS analysis.',
+    category: 'Web Fundamentals',
+    seeAlso: ['REST', 'HTTP', 'JSON'],
+  },
+  {
+    term: 'REST',
+    slug: 'rest',
+    definition: 'Representational State Transfer — an architectural style for designing networked applications. REST APIs use HTTP methods as verbs (GET = read, POST = create, PUT = update, DELETE = remove) and treat everything as resources identified by URLs.',
+    analogy: 'REST is like a library filing system. Books (resources) have specific locations (URLs). You can: look at a book without changing it (GET), add a new book (POST), update a book\'s information (PUT), or remove a book (DELETE). Every action uses the same consistent system.',
+    bugBountyContext: 'REST APIs typically expose more functionality than the frontend shows. Check for: HTTP method bypasses (using PUT instead of POST), mass assignment (sending unexpected fields), IDOR in resource IDs, and authentication checks on every endpoint.',
+    category: 'Web Fundamentals',
+    seeAlso: ['API', 'HTTP', 'JSON'],
+  },
+  {
+    term: 'JSON',
+    slug: 'json',
+    definition: 'JavaScript Object Notation — a lightweight, human-readable data format used for exchanging data between systems. JSON uses key-value pairs and is the standard format for modern API responses. Example: {"name": "John", "age": 30}.',
+    analogy: 'JSON is like a fill-in-the-blank form. Each blank has a label (key) and a space to write (value). "Name: ______, Age: ______" — when filled, it becomes structured data that both humans and computers can easily read and understand.',
+    bugBountyContext: 'Check JSON responses for excessive data exposure (sensitive fields sent to client), JSON injection, mass assignment vulnerabilities, and inconsistent JSON schemas between endpoints. Pretty-print JSON responses to review them thoroughly during testing.',
+    category: 'Web Fundamentals',
+    seeAlso: ['API', 'REST', 'HTTP'],
+  },
+  {
+    term: 'Parameterized Query',
+    slug: 'parameterized-query',
+    definition: 'A database query where user input is passed as a parameter separate from the SQL code, rather than being concatenated into the query string. Parameterized queries completely prevent SQL injection because the database treats input as data, not executable code.',
+    analogy: 'A parameterized query is like a waiter who writes your order on a separate notepad instead of letting you write directly on the chef\'s recipe book. Even if you write "and add poison" on your notepad, the chef only follows the recipe — your notepad notes are just ingredients, not instructions.',
+    bugBountyContext: 'When reporting SQLi, always recommend parameterized queries (prepared statements) as the fix. Check if the application uses ORM frameworks (like SQLAlchemy, Hibernate, Entity Framework) which typically use parameterized queries correctly — but raw SQL queries are often the vulnerable exceptions.',
+    category: 'Development',
+    seeAlso: ['SQL Injection', 'Database', 'Injection'],
+  },
+  {
+    term: 'WAF',
+    slug: 'waf',
+    definition: 'Web Application Firewall — a security tool that monitors and filters HTTP traffic between a web application and the Internet. WAFs can block many common attacks (SQLi, XSS, CSRF) based on rules and signatures, but they are not a replacement for secure coding.',
+    analogy: 'A WAF is like a security guard at a building entrance who checks ID and looks for weapons. They can stop obvious threats (a person carrying a gun = SQLi payload), but a clever attacker might hide their weapon (bypass the WAF with encoding, fragmentation, or alternative syntax).',
+    bugBountyContext: 'WAF bypass is a valuable skill. Techniques: using different encodings (URL, Unicode, double URL), case variations, comment insertion (/**/), HTTP parameter pollution, and using alternative syntax (CONVERT instead of CAST). Identify the WAF type to find known bypasses.',
+    category: 'Security Concepts',
+    seeAlso: ['XSS', 'SQL Injection', 'Firewall'],
+  },
+  {
+    term: 'CVE',
+    slug: 'cve',
+    definition: 'Common Vulnerabilities and Exposures — a publicly listed catalog of known security vulnerabilities. Each CVE has a unique identifier (CVE-2023-XXXXX), a description, severity score (CVSS), and affected software versions. CVEs help track and reference specific security issues.',
+    analogy: 'CVE is like a wanted poster system for software bugs. Each wanted bug gets a unique ID (like "WANTED: BUG-2023-12345"), a description of what it does, how dangerous it is (severity rating), and which software versions are affected. Security teams check CVE listings to know what to patch.',
+    bugBountyContext: 'When testing, check if the target uses outdated software with known CVEs. Tools like Nuclei scan for CVE-based vulnerabilities. Finding an unpatched CVE in a target\'s infrastructure can be a quick win. Know the CVSS scoring system (0-10) to assess severity.',
+    category: 'General',
+    seeAlso: ['Vulnerability', 'CVSS', 'Patch'],
+  },
+  {
+    term: 'CVSS',
+    slug: 'cvss',
+    definition: 'Common Vulnerability Scoring System — a standardized framework for rating the severity of security vulnerabilities. Scores range from 0.0 (none) to 10.0 (critical). Based on metrics like Attack Vector, Attack Complexity, Privileges Required, User Interaction, and Impact.',
+    analogy: 'CVSS is like an earthquake Richter scale for bugs. A 4.0 is minor (informational), 7.0 is serious (high), and 9.0+ is catastrophic (critical). The score helps teams prioritize which bugs to fix first — just like earthquake response teams prioritize magnitude 8.0 over 4.0.',
+    bugBountyContext: 'CVSS score determines bounty amount in many programs. Understand how to calculate severity: network-based attacks score higher than local, no privileges required scores higher, high confidentiality impact scores higher. Complex scoring means more money for critical findings.',
+    category: 'General',
+    seeAlso: ['CVE', 'Vulnerability', 'Bug Bounty'],
+  },
+  {
+    term: 'Exploit',
+    slug: 'exploit',
+    definition: 'An exploit is a piece of code, data, or technique that takes advantage of a vulnerability to cause unintended behavior. Exploits can range from simple proof-of-concept scripts (like showing an alert box for XSS) to sophisticated multi-step attack chains.',
+    analogy: 'An exploit is like a skeleton key that fits a specific lock (vulnerability). The lock\'s flaw is the vulnerability, and the skeleton key is the exploit that takes advantage of it. Without the vulnerability, the exploit doesn\'t work. Without the exploit, the vulnerability is just a weakness.',
+    bugBountyContext: 'In bug bounty, you create proof-of-concept (PoC) exploits to demonstrate impact. A good PoC is minimal, clear, and shows real risk. For XSS: alert(document.cookie). For SQLi: extract a single user record. For IDOR: access another user\'s data and show it in the report.',
+    category: 'General',
+    seeAlso: ['Payload', 'Vulnerability', 'PoC'],
+  },
+  {
+    term: 'Vulnerability',
+    slug: 'vulnerability',
+    definition: 'A weakness or flaw in a system\'s design, implementation, operation, or management that can be exploited to violate the system\'s security policy. Vulnerabilities can exist in code, configuration, architecture, business logic, or human processes.',
+    analogy: 'A vulnerability is like a crack in a dam. The crack itself isn\'t a flood — it\'s just a weakness. But if pressure is applied (an attacker exploits it), the crack can grow and cause a breach. Some cracks are tiny (low severity), others are massive (critical).',
+    bugBountyContext: 'Vulnerabilities are what you get paid to find. Learn to think like an attacker: "What if I change this ID?" "What if I send a negative number?" "What if this field is empty?" Every feature is a potential vulnerability waiting to be discovered through testing.',
+    category: 'General',
+    seeAlso: ['Exploit', 'CVE', 'Bug Bounty'],
+  },
+  {
+    term: 'Bug Bounty',
+    slug: 'bug-bounty',
+    definition: 'A bug bounty program is an offer by an organization to reward individuals (hunters) for finding and reporting security vulnerabilities. Programs have defined scope (what you can test), rules (what\'s allowed), and payout amounts based on severity (typically $500-$50,000+).',
+    analogy: 'Bug bounty is like a "wanted" poster system for bugs. Companies say "find a security bug in our system, and we\'ll pay you." It\'s ethical hacking with permission — companies get free security testing, and hunters get paid for their skills. Everyone wins.',
+    bugBountyContext: 'Start with public programs on HackerOne, Bugcrowd, and Intigriti. Read program scope carefully. Begin with low-hanging fruit (XSS, IDOR). Build methodology over time. Document everything. Write clear reports with impact, reproduction steps, and remediation advice.',
+    category: 'General',
+    seeAlso: ['HackerOne', 'Bugcrowd', 'Responsible Disclosure'],
+  },
+  {
+    term: 'HackerOne',
+    slug: 'hackerone',
+    definition: 'A vulnerability coordination and bug bounty platform that connects organizations with security researchers. Companies like Google, Twitter, GitHub, and the US Department of Defense run programs on HackerOne. It\'s the largest bug bounty platform with over $100M paid to hackers.',
+    analogy: 'HackerOne is like a marketplace where companies list security bugs they want found, and hackers compete to find them first. It\'s eBay for vulnerabilities — but ethical, managed, and with legal protection for researchers who follow the rules.',
+    bugBountyContext: 'Create a HackerOne profile, complete Signal and Impact metrics by submitting quality reports. Start with lower-tier programs, build reputation. Read disclosed reports to learn what valid bugs look like. Use HackerOne\'s hacktivity feed to see real-time vulnerability disclosures.',
+    category: 'Platforms',
+    seeAlso: ['Bug Bounty', 'Bugcrowd', 'Responsible Disclosure'],
+  },
+  {
+    term: 'Bugcrowd',
+    slug: 'bugcrowd',
+    definition: 'A bug bounty and vulnerability disclosure platform similar to HackerOne. Bugcrowd manages programs for companies like Spotify, Atlassian, and The Department of Homeland Security. They offer both public and private programs with managed triage services.',
+    analogy: 'Bugcrowd is like an alternative marketplace to HackerOne. Different companies choose different platforms. Some companies are only on Bugcrowd, some only on HackerOne, some on both. Having accounts on both platforms maximizes your hunting opportunities.',
+    bugBountyContext: 'Bugcrowd uses a "priority rating" system (P1-P5) instead of CVSS for some programs. P1 is critical (urgent fix needed), P5 is informational. Understanding each program\'s rating system helps you write reports that match their severity expectations.',
+    category: 'Platforms',
+    seeAlso: ['Bug Bounty', 'HackerOne', 'Responsible Disclosure'],
+  },
+  {
+    term: 'PoC',
+    slug: 'poc',
+    definition: 'Proof of Concept — a demonstration that a vulnerability exists and can be exploited. A good PoC is minimal, clear, reproducible, and shows real impact. It proves the bug is real, not theoretical. Without a PoC, most bug bounty reports are rejected.',
+    analogy: 'A PoC is like showing a magician\'s trick to prove it\'s not real magic. You don\'t need to perform the full illusion — just enough to show how the trick works. "See? When I change this number, I can see someone else\'s data. That proves the IDOR exists."',
+    bugBountyContext: 'Always include a PoC in your report. For web bugs: provide the exact URL, request/response pairs (from Burp), and step-by-step instructions. Screenshots and screen recordings are even better. A clear PoC = faster triage = higher bounty.',
+    category: 'General',
+    seeAlso: ['Exploit', 'Vulnerability', 'Bug Bounty'],
+  },
+  {
+    term: 'OWASP',
+    slug: 'owasp',
+    definition: 'Open Web Application Security Project — a nonprofit foundation that produces free, openly available articles, methodologies, documentation, tools, and technologies in the cybersecurity field. Most famous for the OWASP Top 10 list of web application security risks.',
+    analogy: 'OWASP is like the Consumer Reports of web security. They independently test and report on the most common security risks, providing free, unbiased information to help anyone build more secure applications. Their Top 10 list is the most-widely referenced web security resource.',
+    bugBountyContext: 'OWASP resources are essential for bug bounty. Use the OWASP Testing Guide as a methodology checklist. Reference OWASP Top 10 when writing reports (e.g., "This is A01: Broken Access Control"). Use OWASP ZAP for automated scanning and OWASP Cheat Sheets for remediation advice.',
+    category: 'Resources',
+    seeAlso: ['WAF', 'Vulnerability', 'Security'],
+  },
+  {
+    term: 'SameSite',
+    slug: 'samesite',
+    definition: 'A cookie attribute that controls when cookies are sent with cross-site requests. SameSite=Strict means cookies are never sent for cross-site requests. SameSite=Lax means cookies are sent for top-level navigation GET requests. SameSite=None means cookies are always sent (must use Secure).',
+    analogy: 'SameSite is like a "do not forward" stamp on a document. Strict means never give this document to anyone from another organization. Lax means you can show it if the person walks into your office directly (top-level navigation). None means give it to anyone who asks.',
+    bugBountyContext: 'Check SameSite settings. SameSite=None without Secure is a vulnerability. SameSite=Lax is default in modern browsers. SameSite=Strict provides the best CSRF protection but may break some legitimate cross-site flows (like payment redirects).',
+    category: 'Security Concepts',
+    seeAlso: ['Cookie', 'CSRF', 'HTTP Headers'],
+  },
+  {
+    term: 'Rate Limiting',
+    slug: 'rate-limiting',
+    definition: 'A technique that controls how many requests a client can make to a server within a specific time window. Rate limiting prevents brute force attacks, credential stuffing, data scraping, and denial of service. Can be based on IP, session, user account, or global counters.',
+    analogy: 'Rate limiting is like a theme park ride with a "max 50 people per hour" sign. It prevents anyone from riding 100 times in an hour (abuse) while still letting everyone have a fair turn. Without it, one person could monopolize the ride all day.',
+    bugBountyContext: 'Test rate limiting on login, password reset, OTP, and API endpoints. Try bypassing IP-based limits with VPNs/proxies, session-based limits by rotating tokens, and check if limits apply to all endpoints equally. Missing rate limiting is a valid finding.',
+    category: 'Security Concepts',
+    seeAlso: ['Authentication', 'Brute Force', 'API Security'],
+  },
+  {
+    term: 'Brute Force',
+    slug: 'brute-force',
+    definition: 'An attack method where an attacker tries many passwords, usernames, or authentication tokens systematically until they find the correct one. Brute force attacks are prevented by rate limiting, account lockouts, CAPTCHA, and multi-factor authentication.',
+    analogy: 'Brute force is like trying every key on a giant key ring to open a door. Eventually one will work — but it takes time. A rate limit is like a guard who only lets you try 3 keys per minute. MFA is like needing both a key AND a secret handshake.',
+    bugBountyContext: 'Check if login pages have rate limiting, CAPTCHA, or account lockout. Try common credentials (admin:admin, test:test). Use credential stuffing with breached password lists. A 200 response vs 401/403 can reveal valid credentials through timing or response differences.',
+    category: 'Attacks',
+    seeAlso: ['Rate Limiting', 'Authentication', 'Credential Stuffing'],
+  },
+  {
+    term: 'MFA',
+    slug: 'mfa',
+    definition: 'Multi-Factor Authentication — a security system that requires more than one method of authentication from independent categories of credentials. Typically combines something you know (password), something you have (phone/token), and something you are (fingerprint/face).',
+    analogy: 'MFA is like needing both a key (password) AND a fingerprint scan to open a vault. If someone steals your key, they still can\'t get in because they don\'t have your fingerprint. Two different requirements = much harder for attackers to bypass.',
+    bugBountyContext: 'Test MFA implementations for bypasses: OTP replay attacks, rate limiting on MFA attempts, MFA enrollment without verification, "remember this device" flaws, backup code abuse, and SMS interception. MFA bypass bugs are typically high to critical severity.',
+    category: 'Security Concepts',
+    seeAlso: ['Authentication', 'OTP', '2FA'],
+  },
+  {
+    term: 'OTP',
+    slug: 'otp',
+    definition: 'One-Time Password — a temporary, single-use code used for authentication. OTPs are typically sent via SMS, email, or generated by authenticator apps (Google Authenticator, Authy). They expire after a short time (usually 30-60 seconds) or after first use.',
+    analogy: 'OTP is like a disposable ticket for a single train ride. You use it once to board the train, and then it\'s worthless. Even if someone finds the ticket later, it can\'t be used because it\'s already been scanned. Time-based OTPs also expire like a day-pass that only works today.',
+    bugBountyContext: 'Test OTP for: unlimited attempts (brute force OTP codes), no expiry, OTP reuse (same code for multiple sessions), OTP returned in API response, SMS/email interception, and race conditions (using same OTP simultaneously from two devices).',
+    category: 'Security Concepts',
+    seeAlso: ['MFA', 'Authentication', '2FA'],
+  },
+  {
+    term: '2FA',
+    slug: '2fa',
+    definition: 'Two-Factor Authentication — a subset of MFA that uses exactly two authentication factors. Most commonly: password (something you know) + OTP from an authenticator app (something you have). 2FA dramatically reduces the risk of account takeover.',
+    analogy: '2FA is like an ATM machine. You need your bank card (something you have) AND your PIN (something you know). If someone steals your card, they can\'t use it without your PIN. If someone knows your PIN, they can\'t use it without your card.',
+    bugBountyContext: 'Check if 2FA is optional or enforced, if it can be bypassed via API calls, if backup codes are securely generated/stored, if 2FA can be disabled without current password, and if there are alternative authentication paths that don\'t require 2FA.',
+    category: 'Security Concepts',
+    seeAlso: ['MFA', 'OTP', 'Authentication'],
+  },
+  {
+    term: 'Google Dorking',
+    slug: 'google-dorking',
+    definition: 'Using advanced Google search operators to find specific information on the web that isn\'t easily accessible through normal searches. Examples: filetype:pdf (find PDFs), intitle:"index of" (find directory listings), site:target.com (search specific domain).',
+    analogy: 'Google Dorking is like using the Dewey Decimal System in a library instead of just wandering around. Normal search is "I want books about security." Dorking is "I want books about security published after 2020, in English, with more than 200 pages, by O\'Reilly publishing."',
+    bugBountyContext: 'Google dorks find exposed configuration files, login pages, admin panels, error messages, and sensitive documents. Create a collection of dorks for each target. Check your dorks regularly — new pages get indexed, revealing new attack surface.',
+    technicalDetail: 'Common operators: site: (specific domain), inurl: (in URL), intitle: (in page title), filetype: (specific file type), link: (pages linking to URL), cache: (cached version), "exact phrase" (exact match), - (exclude), | (OR).',
+    category: 'Methodology',
+    seeAlso: ['OSINT', 'Reconnaissance', 'Search Engine'],
+  },
+  {
+    term: 'Privilege Escalation',
+    slug: 'privilege-escalation',
+    definition: 'A vulnerability that allows a user to gain higher levels of access than they should have. Vertical escalation (user → admin) and horizontal escalation (User A → User B\'s data). Often caused by missing authorization checks on privileged functions.',
+    analogy: 'Privilege escalation is like a regular employee finding the master key to the CEO\'s office. They should only have access to their own desk (user level), but they find a way to access the executive floor (admin level). Vertical = getting a higher rank key. Horizontal = opening someone else\'s desk.',
+    bugBountyContext: 'Test every admin/privileged endpoint while logged in as a regular user. Check JavaScript for hidden admin functions that are client-side hidden but not server-side protected. Test role modification in requests (is_admin: true). Check HTTP method variations.',
+    category: 'Vulnerabilities',
+    seeAlso: ['Authorization', 'IDOR', 'Authentication'],
+  },
+  {
+    term: 'Injection',
+    slug: 'injection',
+    definition: 'A class of vulnerabilities where untrusted data is sent to an interpreter as part of a command or query. The attacker\'s hostile data tricks the interpreter into executing unintended commands. Types: SQL, NoSQL, OS Command, LDAP, XPath, Template (SSTI), and Header injection.',
+    analogy: 'Injection is like a stage actor who changes their lines mid-performance. The script (query) expects specific words at specific times. If an actor says something unexpected that sounds like a stage direction, the other actors might follow it — causing chaos in the play.',
+    bugBountyContext: 'Test every input field and parameter for injection. SQLi gets all the attention, but SSTI (Server-Side Template Injection) in Jinja2/Nunjucks can be equally critical. NoSQL injection in MongoDB apps is increasingly common. Always check for command injection in features that run system commands.',
+    category: 'Vulnerabilities',
+    seeAlso: ['SQL Injection', 'XSS', 'SSRF'],
+  },
+  {
+    term: 'Attack Surface',
+    slug: 'attack-surface',
+    definition: 'The total sum of all points where an unauthorized user can interact with a system — every endpoint, API, port, service, file, user input, and third-party integration. Larger attack surface = more potential vulnerabilities. Reducing attack surface is a key security principle.',
+    analogy: 'Attack surface is like the exterior of a house. Every door (API), window (port), chimney (service), and pet door (third-party integration) is a potential entry point. A house with 20 windows is easier to break into than one with 2 windows. Security = minimize entry points.',
+    bugBountyContext: 'Your job as a hunter is to find hidden parts of the attack surface. Discover staging subdomains, old API versions, forgotten cloud storage buckets, exposed databases, and deprecated endpoints. More attack surface = more chances to find bugs.',
+    category: 'Methodology',
+    seeAlso: ['Reconnaissance', 'Subdomain', 'API Security'],
+  },
+  {
+    term: 'CORS Misconfiguration',
+    slug: 'cors-misconfiguration',
+    definition: 'A common security misconfiguration where a server is overly permissive about which domains can access its resources via CORS headers. Common issues: reflecting Origin header without validation, using wildcard (*) with credentials, and missing origin validation.',
+    analogy: 'A CORS misconfiguration is like a building security guard who lets ANYONE into a restricted area because they ask "which company are you from?" and trusts whatever the visitor says. If a visitor says "TrustedCompany," the guard lets them in — even if they\'re lying.',
+    bugBountyContext: 'Test CORS by sending requests with random Origin headers. If the server echoes back your origin with Access-Control-Allow-Origin: your-origin AND includes credentials: true, sensitive data can be stolen via JavaScript. Test with Origin: https://evil.com.',
+    category: 'Vulnerabilities',
+    seeAlso: ['CORS', 'CSP', 'HTTP Headers'],
+  },
+  {
+    term: 'Mass Assignment',
+    slug: 'mass-assignment',
+    definition: 'A vulnerability where an attacker can modify more fields than intended by sending extra parameters in a request. Common in frameworks that automatically bind request parameters to model attributes. Example: adding "is_admin": true to a registration request.',
+    analogy: 'Mass assignment is like a hotel check-in form that has fields for "Name," "Room Number," and "Credit Card." If you also fill in "I Want To Stay For Free: YES" and the system saves it because it blindly accepts all form fields, that\'s mass assignment.',
+    bugBountyContext: 'Test by adding unexpected fields to JSON requests: {"name": "test", "role": "admin", "is_admin": true, "balance": 999999}. Check API documentation for fields that exist but shouldn\'t be user-modifiable. Common in GraphQL and REST APIs.',
+    category: 'Vulnerabilities',
+    seeAlso: ['API Security', 'Injection', 'Authorization'],
+  },
+  {
+    term: 'Race Condition',
+    slug: 'race-condition',
+    definition: 'A vulnerability that occurs when multiple operations access shared resources simultaneously without proper synchronization, leading to unexpected behavior. In web apps: coupon abuse (using same coupon twice before it\'s marked used), withdrawal double-spending, and like/dislike manipulation.',
+    analogy: 'A race condition is like two people trying to go through a single door at the same time. If there\'s no rule about who goes first, they might both get stuck, or both get through when only one should. The "race" is which request reaches the critical section first.',
+    bugBountyContext: 'Test race conditions by sending multiple simultaneous requests using tools like Burp Intruder or custom scripts. Focus on: coupon/promo code applications, wallet withdrawals, quantity decrements, and any "limited use" features. Send 5-20 parallel requests and check for unexpected success.',
+    category: 'Vulnerabilities',
+    seeAlso: ['Business Logic', 'API Security', 'Concurrency'],
+  },
+  {
+    term: 'Business Logic',
+    slug: 'business-logic',
+    definition: 'Business logic refers to the real-world rules and workflows that govern how an application should behave. Business logic vulnerabilities are flaws in these rules — for example, allowing negative quantities, bypassing payment steps, or abusing promo codes in unintended ways.',
+    analogy: 'Business logic bugs are like finding a loophole in a store\'s return policy. The policy says "30-day return for full refund." If there\'s no rule about how many times you can return the same item, you could buy, return, buy again, return again — indefinitely. The code allows it, but the intent is broken.',
+    bugBountyContext: 'Business logic bugs require deep understanding of the application\'s purpose. Think: "What\'s the intended flow? What happens if I skip a step? What if I do Step B before Step A? What if I do Step A 100 times simultaneously? What if I send negative numbers?"',
+    category: 'Vulnerabilities',
+    seeAlso: ['Race Condition', 'Mass Assignment', 'API Security'],
+  },
+  {
+    term: 'PortSwigger',
+    slug: 'portswigger',
+    definition: 'PortSwigger is the company behind Burp Suite, the most popular web security testing tool. They also offer the Web Security Academy — a free, comprehensive online training platform for web security with practical labs for XSS, SQLi, SSRF, authentication, and more.',
+    analogy: 'PortSwigger Web Security Academy is like a flight simulator for hackers. You learn web security concepts (theory) and then practice in realistic, safe environments (labs). It\'s the most recommended free resource for learning practical web application security testing.',
+    bugBountyContext: 'Complete PortSwigger Academy labs before hunting on real programs. They cover every major vulnerability type with detailed explanations and hands-on exercises. Their Burp Suite tool is essential for intercepting and modifying HTTP traffic during testing.',
+    category: 'Resources',
+    seeAlso: ['OWASP', 'HackerOne', 'Bug Bounty'],
+  },
+  {
+    term: 'Content-Type',
+    slug: 'content-type',
+    definition: 'An HTTP header that tells the client what type of data is being sent. Common values: text/html (web pages), application/json (API data), application/x-www-form-urlencoded (form data), multipart/form-data (file uploads), application/xml (XML data).',
+    analogy: 'Content-Type is like a label on a package that says "fragile" or "this side up." It tells the recipient how to handle the contents. If a package says "live animals" (application/json) but you open it like a book (text/html), things will go wrong.',
+    bugBountyContext: 'Test Content-Type switching (sending JSON to an endpoint that expects form data), content-type sniffing attacks, and MIME type confusion. Missing X-Content-Type-Options: nosniff header can lead to drive-by download attacks.',
+    category: 'Web Fundamentals',
+    seeAlso: ['HTTP', 'HTTP Headers', 'MIME'],
+  },
+  {
+    term: 'HTTP Headers',
+    slug: 'http-headers',
+    definition: 'HTTP headers are metadata sent with HTTP requests and responses. Request headers describe the client (User-Agent, Accept, Authorization). Response headers describe the server and content (Content-Type, Set-Cookie, Cache-Control). Security headers enforce browser security policies.',
+    analogy: 'HTTP headers are like the outside of an envelope. The envelope (request/response) contains the message inside (body), but the outside has addressing, stamps, handling instructions (headers). Security headers are like "CONFIDENTIAL" or "FRAGILE" stamps on the envelope.',
+    bugBountyContext: 'Always check HTTP response headers for security misconfigurations. Missing headers to report: Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy. Present but misconfigured headers can also be findings.',
+    category: 'Web Fundamentals',
+    seeAlso: ['CSP', 'CORS', 'HSTS'],
+  },
+  {
+    term: 'HSTS',
+    slug: 'hsts',
+    definition: 'HTTP Strict Transport Security — a response header that tells browsers to only communicate with the server over HTTPS, never HTTP. Once a browser receives an HSTS header, it automatically converts all HTTP URLs to HTTPS for that domain for the specified duration.',
+    analogy: 'HSTS is like a rule that says "after visiting this website once, your browser must only use the secure entrance from now on." Even if someone tries to send you to the insecure entrance, your browser knows better and uses HTTPS automatically.',
+    bugBountyContext: 'Check for missing HSTS header (common finding). HSTS should have a long max-age (at least 1 year = 31536000), include subdomains (includeSubDomains), and ideally use preload. Missing HSTS allows SSL stripping attacks.',
+    category: 'Security Concepts',
+    seeAlso: ['HTTPS', 'TLS', 'HTTP Headers'],
+  },
+  {
+    term: 'DNS Rebinding',
+    slug: 'dns-rebinding',
+    definition: 'An attack technique where an attacker controls a domain name that resolves to different IP addresses over time. Initially resolves to a legitimate server for the browser to load a page, then changes to resolve to internal IPs (like 127.0.0.1) to bypass same-origin policy.',
+    analogy: 'DNS rebinding is like a valet who takes your car, drives it to a different address, and then claims the car was always there. The browser initially checked the address was valid (first DNS lookup), but the address changed (second DNS lookup) — bypassing the security check.',
+    bugBountyContext: 'DNS rebinding can bypass firewalls and access internal services. It\'s particularly effective against IoT devices and internal APIs. Test with tools like Singularity of Origin (Mandiant) or rebind.it. Report as SSRF variant or security boundary bypass.',
+    category: 'Attacks',
+    seeAlso: ['SSRF', 'DNS', 'Same-Origin Policy'],
+  },
+  {
+    term: 'SOP',
+    slug: 'sop',
+    definition: 'Same-Origin Policy — a critical browser security mechanism that restricts how documents or scripts from one origin can interact with resources from another origin. Two URLs have the same origin if they share the same protocol (http/https), host (domain), and port number.',
+    analogy: 'SOP is like a rule that says "your apartment key only opens your apartment door." Even if you\'re in the same building (same website), you can\'t open your neighbor\'s door (different origin) unless they specifically give you permission (CORS). It\'s a fundamental security boundary.',
+    bugBountyContext: 'SOP is what makes most web attacks non-trivial. Without SOP, any website could read your email. Bugs that bypass SOP (like CORS misconfiguration, DNS rebinding, or certain XSS variants) are often critical because they break the fundamental security model of the web.',
+    category: 'Security Concepts',
+    seeAlso: ['CORS', 'DNS Rebinding', 'CSRF'],
+  },
+  {
+    term: 'Subdomain Takeover',
+    slug: 'subdomain-takeover',
+    definition: 'A vulnerability where an attacker claims a subdomain that points to an external service (like AWS S3, GitHub Pages, Heroku, or Azure) that has been deleted or is no longer in use. The attacker sets up their own service on the same host and effectively "takes over" the subdomain.',
+    analogy: 'Subdomain takeover is like finding an unclaimed storefront in a mall with a sign that says "Formerly: Bob\'s Bakery." The mall directory still lists Bob\'s Bakery at that location. If you open your own shop there, customers looking for Bob\'s Bakery will find your shop instead.',
+    bugBountyContext: 'Check DNS CNAME records that point to external services. Try to register the service (e.g., create an S3 bucket with the same name, set up a GitHub Pages site). If you can, you\'ve found a takeover. Severity is typically high to critical — you can host phishing pages or steal cookies.',
+    category: 'Vulnerabilities',
+    seeAlso: ['DNS', 'Subdomain', 'Attack Surface'],
+  },
+  {
+    term: 'Cloud Security',
+    slug: 'cloud-security',
+    definition: 'Cloud security encompasses the policies, controls, procedures, and technologies that protect cloud-based systems, data, and infrastructure. Key areas: IAM (Identity and Access Management), data encryption, network security, compliance, and shared responsibility model.',
+    analogy: 'Cloud security is like renting an apartment vs owning a house. In a house (on-premises), you\'re responsible for everything — roof, locks, plumbing, electricity. In an apartment (cloud), the building owner is responsible for some things (physical security, wiring), but you\'re responsible for locking your door and not leaving windows open (your data, access keys, configurations).',
+    bugBountyContext: 'Common cloud findings: publicly exposed S3 buckets, overly permissive IAM roles, unencrypted data at rest, misconfigured security groups, exposed cloud metadata (SSRF to 169.254.169.254), and hardcoded cloud API keys in source code.',
+    category: 'Security Concepts',
+    seeAlso: ['SSRF', 'API Security', 'Encryption'],
+  },
+  {
+    term: 'Encryption',
+    slug: 'encryption',
+    definition: 'Encryption is the process of converting data into a coded form (ciphertext) that can only be read by someone with the correct decryption key. Encryption protects data at rest (stored data) and in transit (data being sent over networks). It\'s the foundation of online security.',
+    analogy: 'Encryption is like writing a message in a secret code that only you and your friend know. Even if someone intercepts the message, it looks like gibberish. Only your friend (who has the decoder key) can read it. Without the key, the message is meaningless.',
+    bugBountyContext: 'Check for: weak encryption algorithms (DES, RC4), hardcoded encryption keys, missing encryption for sensitive data, improper TLS configuration, and encryption implementation flaws. Report findings about unencrypted sensitive data (passwords, credit cards, PII) as high severity.',
+    category: 'Security Concepts',
+    seeAlso: ['TLS', 'HTTPS', 'SSL'],
+  },
+  {
+    term: 'CISO',
+    slug: 'ciso',
+    definition: 'Chief Information Security Officer — the senior-level executive responsible for an organization\'s information and data security. The CISO oversees security strategy, compliance, risk management, and incident response. They are the ultimate decision-maker for security policies.',
+    analogy: 'The CISO is like the captain of a ship responsible for its safety. They don\'t steer the ship (that\'s IT operations), but they ensure the ship has lifeboats (backups), the crew knows emergency procedures (training), and the navigation avoids icebergs (threat prevention).',
+    bugBountyContext: 'CISOs are often the people who approve bug bounty program budgets. When writing reports, frame findings in business terms: "This SQL injection could lead to a data breach costing $3M+ and regulatory fines." Speak their language — impact and risk, not just technical details.',
+    category: 'General',
+    seeAlso: ['Bug Bounty', 'Vulnerability', 'Security'],
+  },
+  {
+    term: 'Postman',
+    slug: 'postman',
+    definition: 'A popular API development and testing tool that allows you to send HTTP requests, inspect responses, organize endpoints into collections, and automate API testing. Bug bounty hunters use Postman to explore and test API endpoints during reconnaissance.',
+    analogy: 'Postman is like a Swiss Army knife for API testing. Instead of using curl commands in the terminal (which is like using individual tools), Postman gives you a clean interface with history, collections, environment variables, and automation — like having a fully equipped workshop.',
+    bugBountyContext: 'Use Postman to: organize API endpoints discovered during recon, test different HTTP methods, set up authorization tokens automatically, chain requests (login → use token → access protected endpoint), and export collections for documentation or collaboration.',
+    category: 'Tools',
+    seeAlso: ['API', 'REST', 'Burp Suite'],
+  },
+  {
+    term: 'Burp Suite',
+    slug: 'burp-suite',
+    definition: 'The most widely used web application security testing tool, developed by PortSwigger. It acts as an intercepting proxy between your browser and the target, allowing you to view, modify, and repeat HTTP requests. Key features: Proxy, Repeater, Intruder, Scanner, and Decoder.',
+    analogy: 'Burp Suite is like having X-ray vision for web traffic. You see every request your browser makes and every response the server sends. You can stop a request mid-flight, modify it, and send it on its way (intercept), or re-send modified versions (Repeater) to test different inputs.',
+    bugBountyContext: 'Essentialtool for web bug bounty. Use Proxy to capture traffic, Repeater to manually test parameter tampering, Intruder for brute-forcing/fuzzing, and Decoder for encoding/decoding payloads. The Community Edition is free and sufficient for most hunting. The Professional version adds passive scanning.',
+    category: 'Tools',
+    seeAlso: ['PortSwigger', 'HTTP', 'API Security'],
+  },
+  {
+    term: 'Nuclei',
+    slug: 'nuclei',
+    definition: 'An open-source fast vulnerability scanner based on YAML templates. Nuclei sends requests to targets and matches responses against predefined templates to detect vulnerabilities. It\'s community-driven with thousands of templates covering CVEs, misconfigurations, and exposures.',
+    analogy: 'Nuclei is like having a giant checklist of known vulnerabilities. Instead of manually testing each vulnerability, you run the checklist and Nuclei automatically tests everything. When something matches, it alerts you. The community constantly adds new checklists (templates).',
+    bugBountyContext: 'Use Nuclei during recon phase to quickly scan for known vulnerabilities across discovered subdomains. Filter templates by severity. Combine with subdomain enumeration tools (Subfinder, Assetfinder) for automated scanning. Custom templates can be written for specific targets.',
+    category: 'Tools',
+    seeAlso: ['CVE', 'Reconnaissance', 'Vulnerability'],
+  },
+  {
+    term: 'Shodan',
+    slug: 'shodan',
+    definition: 'A search engine for internet-connected devices. Unlike Google which indexes web pages, Shodan indexes banners and metadata from services running on IP addresses. You can search for specific devices (webcams, routers, servers), open ports, and vulnerable services.',
+    analogy: 'Shodan is like a telescope that lets you see every device connected to the Internet. While Google shows you websites (the surface), Shodan shows you servers, routers, webcams, printers, and IoT devices (the infrastructure). It reveals what\'s actually running behind the websites.',
+    bugBountyContext: 'Use Shodan to: find target infrastructure (IP ranges, open ports), discover exposed databases, identify server technologies (Apache, Nginx, IIS), find development/staging servers (dev.target.com), and check for known vulnerable services. Integrate with recon workflows via the Shodan API.',
+    category: 'Tools',
+    seeAlso: ['OSINT', 'Reconnaissance', 'Attack Surface'],
+  },
+  {
+    term: 'HTTP Method',
+    slug: 'http-method',
+    definition: 'HTTP methods (also called HTTP verbs) indicate the desired action for a resource. GET (retrieve), POST (create), PUT/PATCH (update), DELETE (remove), HEAD (headers only), OPTIONS (available methods), and CONNECT/TRACE (rare). Each has specific safety and idempotency properties.',
+    analogy: 'HTTP methods are like verbs in a recipe. "Get" the ingredient list (read). "Post" a new recipe (create). "Put" a replacement recipe (full update). "Patch" a correction to the recipe (partial update). "Delete" the recipe (remove). Each verb tells the kitchen exactly what to do.',
+    bugBountyContext: 'Test HTTP method restrictions. Can you DELETE a resource that should only be read? Can you PATCH a field that shouldn\'t be modified? Can you bypass access controls by switching methods (POST instead of GET)? OPTIONS reveals allowed methods — check if unexpected methods are permitted.',
+    category: 'Web Fundamentals',
+    seeAlso: ['HTTP', 'REST', 'API Security'],
+  },
+  {
+    term: 'HTTP Status Code',
+    slug: 'http-status-code',
+    definition: 'Three-digit codes returned by a server to indicate the result of an HTTP request. Categories: 1xx (informational), 2xx (success — 200 OK, 201 Created), 3xx (redirect — 301, 302), 4xx (client error — 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found), 5xx (server error — 500 Internal Server Error).',
+    analogy: 'HTTP status codes are like the traffic lights of the web. 200 (green = go, everything\'s fine), 301/302 (yellow = detour, resource moved), 403 (red = stop, you\'re not allowed), 404 (sign missing = road doesn\'t exist), 500 (accident = server crashed).',
+    bugBountyContext: 'Interesting codes for bug bounty: 200 on unauthorized access (authorization bypass), 403 revealing directory structure (info disclosure), 405 Method Not Allowed with Allow header (method enumeration), 500 with stack trace (info disclosure), 302 without auth check (open redirect).',
+    category: 'Web Fundamentals',
+    seeAlso: ['HTTP', 'HTTP Headers', 'REST'],
+  },
+];
+
+export function getDictionary(): DictEntry[] {
+  return dictionary;
+}
+
+export function getEntry(slug: string): DictEntry | undefined {
+  return dictionary.find(e => e.slug === slug);
+}
+
+export function searchDictionary(query: string): DictEntry[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+  return dictionary.filter(e =>
+    e.term.toLowerCase().includes(q) ||
+    e.definition.toLowerCase().includes(q) ||
+    e.category.toLowerCase().includes(q)
+  );
+}
+
+export function getCategories(): string[] {
+  return [...new Set(dictionary.map(e => e.category))];
+}

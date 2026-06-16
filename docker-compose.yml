@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: reconforge
+      POSTGRES_PASSWORD: reconforge_secret
+      POSTGRES_DB: reconforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - reconforge_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reconforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - reconforge_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://reconforge:reconforge_secret@postgres:5432/reconforge
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: reconforge-super-secret-key-change-in-production
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SHODAN_API_KEY: ${SHODAN_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      SECURITYTRAILS_API_KEY: ${SECURITYTRAILS_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reconforge_net
+    volumes:
+      - scan_data:/app/data
+      - screenshots:/app/screenshots
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.workers.tasks worker --loglevel=info --concurrency=4
+    environment:
+      DATABASE_URL: postgresql+asyncpg://reconforge:reconforge_secret@postgres:5432/reconforge
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: reconforge-super-secret-key-change-in-production
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SHODAN_API_KEY: ${SHODAN_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      SECURITYTRAILS_API_KEY: ${SECURITYTRAILS_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reconforge_net
+    volumes:
+      - scan_data:/app/data
+      - screenshots:/app/screenshots
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.workers.tasks beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://reconforge:reconforge_secret@postgres:5432/reconforge
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reconforge_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - reconforge_net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - reconforge_net
+
+networks:
+  reconforge_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  scan_data:
+  screenshots:

@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+
+# Screenshots
+screenshots/*.png
+
+# Data
+data/
+
+# Logs
+*.log
+
+# Database (SQLite)
+*.db
+*.db-journal
+
+# Uploads (user content)
+uploads/notes/*
+!uploads/notes/.gitkeep
+
+# Docker server logs
+server.log
+
+# Next.js
+.tsbuildinfo
+
+# Python build
+*.pyc
+__pycache__/
